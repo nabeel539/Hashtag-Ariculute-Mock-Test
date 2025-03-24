@@ -207,3 +207,39 @@ export const verifyPayment = async (req, res) => {
     });
   }
 };
+
+// Check if user has purchased a test
+export const checkPurchase = async (req, res) => {
+  try {
+    const { testId } = req.params;
+    const userId = req.user._id; // Get user ID from authenticated user
+
+    console.log("Checking purchase for testId:", testId);
+    console.log("User ID:", userId);
+    if (!testId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required parameters",
+      });
+    }
+
+    // Check if there's a successful payment for this test by this user
+    const payment = await Payment.findOne({
+      userId,
+      testId,
+      status: "success",
+    });
+
+    return res.json({
+      success: true,
+      isPurchased: !!payment,
+    });
+  } catch (error) {
+    console.error("Error checking purchase:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error checking purchase status",
+      error: error.message,
+    });
+  }
+};

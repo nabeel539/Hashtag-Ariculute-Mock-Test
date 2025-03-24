@@ -108,32 +108,32 @@ export default function Footer() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <a
-                    href="https://twitter.com"
+                    href="https://www.youtube.com/@HashtagAgriculture"
                     className="text-muted-foreground hover:text-foreground transition-colors"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Twitter
+                    Youtube
                   </a>
                 </li>
                 <li>
                   <a
-                    href="https://facebook.com"
+                    href="https://chat.whatsapp.com/EdCIhZYulWR29zvfLh5ny7"
                     className="text-muted-foreground hover:text-foreground transition-colors"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Facebook
+                    WhatsApp Group
                   </a>
                 </li>
                 <li>
                   <a
-                    href="https://instagram.com"
+                    href="https://t.me/HashtagAgriJobs"
                     className="text-muted-foreground hover:text-foreground transition-colors"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Instagram
+                    Telegram Group
                   </a>
                 </li>
               </ul>

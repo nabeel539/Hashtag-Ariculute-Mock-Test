@@ -44,16 +44,34 @@ export default function TestDetailPage() {
   const navigate = useNavigate(); // React Router's navigate function
   const [isLoading, setIsLoading] = useState(false);
   const [test, setTest] = useState(null); // State to store test details
+  const [isPurchased, setIsPurchased] = useState(false); // State to track if test is purchased
   const { backendUrl } = useContext(StoreContext);
 
-  // Fetch test details by ID
+  // Fetch test details by ID and check if purchased
   useEffect(() => {
-    const fetchTest = async () => {
+    const fetchTestAndCheckPurchase = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get(`${backendUrl}/api/auth/tests/${id}`);
-        if (response.data.success) {
-          setTest(response.data.data); // Set test details
+        // Fetch test details
+        const testResponse = await axios.get(
+          `${backendUrl}/api/auth/tests/${id}`
+        );
+        if (testResponse.data.success) {
+          setTest(testResponse.data.data);
+
+          // Check if user has purchased this test
+          const purchaseResponse = await axios.get(
+            `${backendUrl}/api/payment/check-purchase/${id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+
+          if (purchaseResponse.data.success) {
+            setIsPurchased(purchaseResponse.data.isPurchased);
+          }
         } else {
           toast.error("Failed to fetch test details");
         }
@@ -64,7 +82,7 @@ export default function TestDetailPage() {
       }
     };
 
-    fetchTest();
+    fetchTestAndCheckPurchase();
   }, [id, backendUrl]);
 
   // If test not found, show error
@@ -275,8 +293,14 @@ export default function TestDetailPage() {
         <div>
           <Card className="sticky top-24">
             <CardHeader>
-              <CardTitle>Purchase Test</CardTitle>
-              <CardDescription>Get access to all test sets</CardDescription>
+              <CardTitle>
+                {isPurchased ? "Access Test" : "Purchase Test"}
+              </CardTitle>
+              <CardDescription>
+                {isPurchased
+                  ? "You have already purchased this test"
+                  : "Get access to all test sets"}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-3xl font-bold text-blue-600">
@@ -326,13 +350,22 @@ export default function TestDetailPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button
-                className="w-full"
-                onClick={handlePurchase}
-                disabled={isLoading}
-              >
-                {isLoading ? "Processing..." : "Buy Now"}
-              </Button>
+              {isPurchased ? (
+                <Button
+                  className="w-full"
+                  onClick={() => navigate(`/tests/${id}/attempt`)}
+                >
+                  Start Test
+                </Button>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={handlePurchase}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Processing..." : "Buy Now"}
+                </Button>
+              )}
               <p className="text-xs text-center text-muted-foreground">
                 By purchasing, you agree to our terms and conditions
               </p>

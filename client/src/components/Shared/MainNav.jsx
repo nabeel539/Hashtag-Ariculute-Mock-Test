@@ -25,9 +25,11 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link to="/" className="flex items-center">
-            {/* <span className="text-xl font-bold">GovTestPrep</span> */}
+          <Link to="/" className="flex items-center gap-3">
             <img src={assets.logo} alt="Logo" className="w-10 h-10" />
+            <span className="text-2xl font-normal logo-text">
+              Hashtag Agriculture
+            </span>
           </Link>
         </div>
 
