@@ -5,7 +5,7 @@ import { createContext, useEffect, useState } from "react";
 export const StoreContext = createContext(null);
 
 const StoreContextProvider = (props) => {
-  const backendUrl = "http://localhost:2021";
+  const backendUrl = "https://hashtag-agriculture-backend.onrender.com";
 
   // Enhanced state to include token, role and authentication status
   const [authState, setAuthState] = useState({
