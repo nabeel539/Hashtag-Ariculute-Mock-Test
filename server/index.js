@@ -22,7 +22,14 @@ try {
 }
 
 // MiddleWare
-app.use(cors());
+// app.use(cors());
+app.use(
+  cors({
+    origin: "https://hashtag-ariculute-mock-test.onrender.com", // Replace with your frontend URL
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true, // If using cookies/sessions
+  })
+);
 app.use(express.json());
 
 // Routes
