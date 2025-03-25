@@ -93,10 +93,10 @@ const TermsAndConditions = () => {
           If you have any questions or concerns regarding these Terms and
           Conditions, please contact our support team at{" "}
           <a
-            href="mailto:support@hashtagagriculture.com"
+            href="mailto:contact.hashtagagri@gmail.com"
             className="text-blue-600 underline"
           >
-            support@hashtagagriculture.com
+            contact.hashtagagri@gmail.com
           </a>
           .
         </p>
