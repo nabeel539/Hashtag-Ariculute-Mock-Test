@@ -214,8 +214,6 @@ export const checkPurchase = async (req, res) => {
     const { testId } = req.params;
     const userId = req.user._id; // Get user ID from authenticated user
 
-    console.log("Checking purchase for testId:", testId);
-    console.log("User ID:", userId);
     if (!testId || !userId) {
       return res.status(400).json({
         success: false,

@@ -22,6 +22,8 @@ import VerifyPayment from "./pages/VerifyPayment";
 import TermsAndConditions from "./pages/polices/TermsAndConditions";
 import PrivacyPolicy from "./pages/polices/PrivacyPolicy";
 import RefundPolicy from "./pages/polices/RefundPolicy";
+import TestSetsPage from "./pages/TestSetPage";
+import TestInstructionsPage from "./pages/TestInstructionPage";
 
 function App() {
   return (
@@ -49,7 +51,16 @@ function App() {
               <Route path="/dashboard/user" element={<UserDashboardPage />} />
               <Route path="/tests" element={<BrowseTestPage />} />
               <Route path="/tests/:id" element={<TestDetailPage />} />
-              <Route path="/tests/:id/attempt" element={<TestAttemptPage />} />
+              <Route path="/tests/:id/sets" element={<TestSetsPage />} />
+              <Route
+                path="/tests/:id/sets/:setId/instructions"
+                element={<TestInstructionsPage />}
+              />
+              <Route
+                path="/tests/:id/sets/:setId/attempt"
+                element={<TestAttemptPage />}
+              />
+
               <Route path="/results/:id" element={<ResultPage />} />
             </Route>
 

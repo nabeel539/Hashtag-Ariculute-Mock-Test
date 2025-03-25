@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+/* eslint-disable no-unused-vars */
+import { useState, useEffect, useContext } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,84 +23,95 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Clock, AlertTriangle } from "lucide-react";
-
-// Mock test data
-const mockTest = {
-  id: 1,
-  title: "UPSC Civil Services - Set 1",
-  description: "Preliminary examination mock test",
-  timeLimit: 120, // in minutes
-  questions: [
-    {
-      id: 1,
-      text: "Which of the following is NOT a fundamental right guaranteed by the Indian Constitution?",
-      options: [
-        { id: "a", text: "Right to Equality" },
-        { id: "b", text: "Right to Freedom" },
-        { id: "c", text: "Right to Property" },
-        { id: "d", text: "Right to Freedom of Religion" },
-      ],
-      correctAnswer: "c",
-    },
-    {
-      id: 2,
-      text: "Who among the following was the first Chairman of the Planning Commission of India?",
-      options: [
-        { id: "a", text: "Jawaharlal Nehru" },
-        { id: "b", text: "Sardar Vallabhbhai Patel" },
-        { id: "c", text: "Dr. Rajendra Prasad" },
-        { id: "d", text: "Dr. B.R. Ambedkar" },
-      ],
-      correctAnswer: "a",
-    },
-    // Add more questions as needed...
-  ],
-};
+import { Circle, CheckCircle, Flag } from "lucide-react";
+import { toast } from "sonner";
+import { StoreContext } from "@/context/StoreContext";
 
 export default function TestAttemptPage() {
-  const { id } = useParams(); // Get the test ID from the URL
-  const navigate = useNavigate(); // React Router's navigate function
+  const { id, setId } = useParams();
+  const navigate = useNavigate();
+  const [test, setTest] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(mockTest.timeLimit * 60); // in seconds
+  const [questionStatus, setQuestionStatus] = useState({});
+  const [timeLeft, setTimeLeft] = useState(0);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
-  const [isTimeUpDialogOpen, setIsTimeUpDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { backendUrl } = useContext(StoreContext);
 
-  // Load saved state from localStorage on component mount
+  // ✅ Fetch test data from API
   useEffect(() => {
-    const savedState = localStorage.getItem(`test_${id}_state`);
+    const fetchTest = async () => {
+      try {
+        const response = await axios.get(
+          `${backendUrl}/api/test/${id}/sets/${setId}/questions`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        if (response.data.success) {
+          setTest(response.data.data);
+          setTimeLeft(response.data.data.timeLimit * 60);
+          initializeQuestionStatus(response.data.data.questions);
+        } else {
+          toast.error("Failed to load test");
+          navigate(`/tests/${id}/sets`);
+        }
+      } catch (error) {
+        toast.error("Error fetching test details");
+        navigate(`/tests/${id}/sets`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTest();
+  }, [id, setId, navigate]);
+
+  // ✅ Initialize question tracking
+  const initializeQuestionStatus = (questions) => {
+    let status = {};
+    questions.forEach((q) => {
+      status[q._id] = "notVisited"; // Default status for all questions
+    });
+    setQuestionStatus(status);
+  };
+
+  // ✅ Load saved state on refresh
+  useEffect(() => {
+    const savedState = localStorage.getItem(`test_${id}_set_${setId}_state`);
     if (savedState) {
-      const {
-        currentQuestion: savedQuestion,
-        answers: savedAnswers,
-        timeLeft: savedTimeLeft,
-      } = JSON.parse(savedState);
-      setCurrentQuestion(savedQuestion);
+      const { savedAnswers, savedQuestionStatus, savedTimeLeft } =
+        JSON.parse(savedState);
       setAnswers(savedAnswers);
+      setQuestionStatus(savedQuestionStatus);
       setTimeLeft(savedTimeLeft);
     }
-  }, [id]);
+  }, [id, setId]);
 
-  // Save state to localStorage whenever it changes
+  // ✅ Save test progress to localStorage
   useEffect(() => {
     localStorage.setItem(
-      `test_${id}_state`,
+      `test_${id}_set_${setId}_state`,
       JSON.stringify({
-        currentQuestion,
-        answers,
-        timeLeft,
+        savedAnswers: answers,
+        savedQuestionStatus: questionStatus,
+        savedTimeLeft: timeLeft,
       })
     );
-  }, [currentQuestion, answers, timeLeft, id]);
+  }, [answers, questionStatus, timeLeft, id, setId]);
 
-  // Timer countdown
+  // ✅ Timer countdown
   useEffect(() => {
+    if (!timeLeft) return;
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          setIsTimeUpDialogOpen(true);
+          setIsSubmitDialogOpen(true);
           return 0;
         }
         return prev - 1;
@@ -106,134 +119,90 @@ export default function TestAttemptPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [timeLeft]);
 
-  // Format time as MM:SS
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
-      .toString()
-      .padStart(2, "0")}`;
-  };
-
-  // Handle answer selection
+  // ✅ Handle answer selection
   const handleAnswerSelect = (questionId, answerId) => {
-    if (typeof answerId !== "string") {
-      console.error("Invalid answerId type:", answerId);
-      return;
-    }
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: answerId,
-    }));
+    setAnswers((prev) => ({ ...prev, [questionId]: answerId }));
+    setQuestionStatus((prev) => ({ ...prev, [questionId]: "answered" }));
   };
 
-  // Navigate to next question
+  // ✅ Handle question navigation
   const handleNextQuestion = () => {
-    if (currentQuestion < mockTest.questions.length - 1) {
+    if (currentQuestion < test.questions.length - 1) {
       setCurrentQuestion((prev) => prev + 1);
     }
   };
 
-  // Navigate to previous question
   const handlePrevQuestion = () => {
     if (currentQuestion > 0) {
       setCurrentQuestion((prev) => prev - 1);
     }
   };
 
-  // Handle test submission
+  // ✅ Handle marking question for review
+  const handleMarkForReview = () => {
+    setQuestionStatus((prev) => ({
+      ...prev,
+      [test.questions[currentQuestion]._id]: "markedForReview",
+    }));
+  };
+
+  // ✅ Handle test submission
   const handleSubmitTest = () => {
-    let correctAnswers = 0;
-    mockTest.questions.forEach((question) => {
-      if (answers[question.id] === question.correctAnswer) {
-        correctAnswers++;
-      }
-    });
-
-    const score = Math.round(
-      (correctAnswers / mockTest.questions.length) * 100
-    );
-
-    localStorage.removeItem(`test_${id}_state`);
-
-    alert(`Test Submitted. Your score: ${score}%`);
     navigate(`/results/${id}`);
   };
 
-  // Current question data
-  const question = mockTest.questions[currentQuestion];
+  if (loading) return <div>Loading test...</div>;
+  if (!test) return <div>Test not found</div>;
 
-  // Calculate progress
-  const progress =
-    (Object.keys(answers).length / mockTest.questions.length) * 100;
+  const question = test.questions[currentQuestion];
+  const progress = (Object.keys(answers).length / test.questions.length) * 100;
+
+  // ✅ Icons for different question states
+  const getQuestionIcon = (status) => {
+    switch (status) {
+      case "notVisited":
+        return <Circle className="text-gray-400" />;
+      case "answered":
+        return <CheckCircle className="text-green-500" />;
+      case "markedForReview":
+        return <Flag className="text-yellow-500" />;
+      default:
+        return <Circle className="text-gray-400" />;
+    }
+  };
 
   return (
     <div className="container py-6">
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">{mockTest.title}</h1>
-            <p className="text-muted-foreground">{mockTest.description}</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-amber-100 text-amber-800 px-3 py-1.5 rounded-md">
-              <Clock className="h-4 w-4" />
-              <span className="font-medium">{formatTime(timeLeft)}</span>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => setIsSubmitDialogOpen(true)}
-            >
-              Submit Test
-            </Button>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">{test.testName}</h1>
+          <div className="bg-amber-100 text-amber-800 px-3 py-1.5 rounded-md">
+            ⏳ {Math.floor(timeLeft / 60)}:
+            {(timeLeft % 60).toString().padStart(2, "0")}
           </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span>Progress</span>
-            <span>
-              {Object.keys(answers).length}/{mockTest.questions.length}{" "}
-              questions answered
-            </span>
-          </div>
-          <Progress value={progress} />
-        </div>
+        <Progress value={progress} />
 
-        <Card className="overflow-hidden">
+        {/* Question Card */}
+        <Card>
           <CardHeader>
             <CardTitle>
-              Question {currentQuestion + 1} of {mockTest.questions.length}
+              Question {currentQuestion + 1} of {test.questions.length}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="text-lg font-medium">{question.text}</div>
+          <CardContent>
+            <div className="text-lg font-medium">{question.question}</div>
             <RadioGroup
-              value={answers[question.id] || ""} // Ensure value is always a string
-              onValueChange={(value) => handleAnswerSelect(question.id, value)}
-              className="space-y-3"
+              onValueChange={(value) => handleAnswerSelect(question._id, value)}
             >
               {question.options.map((option) => (
-                <div
-                  key={option.id}
-                  className={`flex items-center space-x-2 rounded-md border p-4 ${
-                    answers[question.id] === option.id
-                      ? "border-blue-500 bg-blue-50"
-                      : ""
-                  }`}
-                >
-                  <RadioGroupItem
-                    value={option.id}
-                    id={`option-${option.id}`}
-                  />
-                  <Label
-                    htmlFor={`option-${option.id}`}
-                    className="flex-1 cursor-pointer"
-                  >
-                    {option.text}
-                  </Label>
+                <div key={option.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option.id} />
+                  <Label>{option.text}</Label>
                 </div>
               ))}
             </RadioGroup>
@@ -246,32 +215,33 @@ export default function TestAttemptPage() {
             >
               Previous
             </Button>
+            <Button onClick={handleMarkForReview}>Mark for Review</Button>
             <Button
               onClick={handleNextQuestion}
-              disabled={currentQuestion === mockTest.questions.length - 1}
+              disabled={currentQuestion === test.questions.length - 1}
             >
               Next
             </Button>
           </CardFooter>
         </Card>
 
+        {/* Question Navigation */}
         <div className="grid grid-cols-5 md:grid-cols-10 gap-2">
-          {mockTest.questions.map((q, index) => (
+          {test.questions.map((q, index) => (
             <Button
-              key={q.id}
-              variant={answers[q.id] ? "default" : "outline"}
-              className={`h-10 w-10 p-0 ${
-                currentQuestion === index ? "ring-2 ring-offset-2" : ""
-              }`}
+              key={q._id}
+              variant="outline"
+              className="h-10 w-10 p-0"
               onClick={() => setCurrentQuestion(index)}
             >
+              {getQuestionIcon(questionStatus[q._id])}
               {index + 1}
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Submit Test Dialog */}
+      {/* Submit Confirmation */}
       <AlertDialog
         open={isSubmitDialogOpen}
         onOpenChange={setIsSubmitDialogOpen}
@@ -280,46 +250,13 @@ export default function TestAttemptPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Submit Test?</AlertDialogTitle>
             <AlertDialogDescription>
-              You have answered {Object.keys(answers).length} out of{" "}
-              {mockTest.questions.length} questions.
-              {Object.keys(answers).length < mockTest.questions.length && (
-                <div className="mt-2 flex items-center text-amber-600">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  <span>
-                    You have{" "}
-                    {mockTest.questions.length - Object.keys(answers).length}{" "}
-                    unanswered questions.
-                  </span>
-                </div>
-              )}
-              Are you sure you want to submit?
+              You have answered {Object.keys(answers).length} questions.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleSubmitTest}>
               Submit
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Time Up Dialog */}
-      <AlertDialog
-        open={isTimeUpDialogOpen}
-        onOpenChange={setIsTimeUpDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Time&apos;s Up!</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your time for this test has expired. Your answers will be
-              automatically submitted.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={handleSubmitTest}>
-              View Results
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

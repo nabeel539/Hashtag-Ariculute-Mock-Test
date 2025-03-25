@@ -41,6 +41,7 @@ const getUserIdFromToken = (token) => {
 
 export default function TestDetailPage() {
   const { id } = useParams(); // Get the test ID from the URL
+  console.log("testId", id);
   const navigate = useNavigate(); // React Router's navigate function
   const [isLoading, setIsLoading] = useState(false);
   const [test, setTest] = useState(null); // State to store test details
@@ -58,10 +59,9 @@ export default function TestDetailPage() {
         );
         if (testResponse.data.success) {
           setTest(testResponse.data.data);
-
-          // Check if user has purchased this test
+          // Check purchase status
           const purchaseResponse = await axios.get(
-            `${backendUrl}/api/payment/check-purchase/${id}`,
+            `${backendUrl}/api/order/check-purchase/${id}`,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -69,13 +69,19 @@ export default function TestDetailPage() {
             }
           );
 
+          console.log("Check Purchase API Response:", purchaseResponse.data); // ✅ Debug API Response
+
           if (purchaseResponse.data.success) {
             setIsPurchased(purchaseResponse.data.isPurchased);
+            console.log("Is Purchased:", isPurchased);
+          } else {
+            setIsPurchased(false);
           }
         } else {
           toast.error("Failed to fetch test details");
         }
       } catch (error) {
+        console.error("Error fetching test details:", error);
         toast.error("Error fetching test details");
       } finally {
         setIsLoading(false);
@@ -101,7 +107,6 @@ export default function TestDetailPage() {
   const handlePurchase = async () => {
     setIsLoading(true);
     try {
-      console.log("Backend URL:", backendUrl);
       // Step 1: Create order
       const { data } = await axios.post(
         `${backendUrl}/api/order/razorpay`,
@@ -144,6 +149,7 @@ export default function TestDetailPage() {
                 toast.success(
                   "Payment Successful! You can now access the test."
                 );
+                setIsPurchased(true);
                 navigate("/dashboard/user");
               } else {
                 toast.error(
@@ -162,7 +168,7 @@ export default function TestDetailPage() {
             email: localStorage.getItem("userEmail") || "user@example.com",
           },
           theme: {
-            color: "#2563eb",
+            color: "#18c201",
           },
         };
 
@@ -353,7 +359,7 @@ export default function TestDetailPage() {
               {isPurchased ? (
                 <Button
                   className="w-full"
-                  onClick={() => navigate(`/tests/${id}/attempt`)}
+                  onClick={() => navigate(`/tests/${id}/sets`)}
                 >
                   Start Test
                 </Button>

@@ -3,6 +3,7 @@ import express from "express";
 import adminRoutes from "./routes/adminRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import paymenRoutes from "./routes/paymentRoutes.js";
+import testRoutes from "./routes/testRoutes.js";
 import connectDB from "./config/db.js";
 import cors from "cors";
 
@@ -28,6 +29,7 @@ app.use(express.json());
 app.use("/api/admin", adminRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/order", paymenRoutes);
+app.use("/api/test", testRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
